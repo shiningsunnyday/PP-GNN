@@ -1,0 +1,3 @@
+[submodule "pretrain/GNNMDP"]
+	path = pretrain/GNNMDP
+	url = https://github.com/shiningsunnyday/GNNMDP.git
