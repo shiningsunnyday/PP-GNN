@@ -1,5 +1,6 @@
 from sklearn.metrics import roc_auc_score
 from tensorboardX import SummaryWriter
+import pretrain 
 
 from args import *
 from model import *
@@ -37,6 +38,7 @@ for task in ['link', 'link_pair']:
             datasets_name = ['communities', 'email', 'protein']
     else:
         datasets_name = [args.dataset]
+        
     for dataset_name in datasets_name:
         # if dataset_name in ['communities','grid']:
         #     args.cache = False
@@ -68,18 +70,23 @@ for task in ['link', 'link_pair']:
             args.batch_size = min(args.batch_size, len(data_list))
             print('Anchor num {}, Batch size {}'.format(args.anchor_num, args.batch_size))
 
-            # data
-            for i,data in enumerate(data_list):
-                preselect_anchor(data, layer_num=args.layer_num, anchor_num=args.anchor_num, device='cpu')
-                data = data.to(device)
-                data_list[i] = data
-
             # model
             input_dim = num_features
             output_dim = args.output_dim
-            model = locals()[args.model](input_dim=input_dim, feature_dim=args.feature_dim,
-                        hidden_dim=args.hidden_dim, output_dim=output_dim,
-                        feature_pre=args.feature_pre, layer_num=args.layer_num, dropout=args.dropout).to(device)
+            pargs = [input_dim, args.feature_dim, args.hidden_dim, output_dim,]
+            kwargs = {'feature_pre':args.feature_pre, 'layer_num':args.layer_num, 'dropout':args.dropout}
+            model = locals()[args.model](*pargs, **kwargs).to(device)
+
+            # pretrain
+            if args.pretrain_task:
+                model = getattr(pretrain, args.pretrain_task)(model, data_list, *pargs, **kwargs)
+            else:
+                # data
+                for i,data in enumerate(data_list):
+                    preselect_anchor(data, layer_num=args.layer_num, anchor_num=args.anchor_num, device='cpu')
+                    data = data.to(device)
+                    data_list[i] = data
+
             # loss
             optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=5e-4)
             if 'link' in args.task:

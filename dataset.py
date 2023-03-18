@@ -234,7 +234,7 @@ def load_graphs(dataset_str):
         graphs = []
         features = []
         for _ in range(1):
-            graph = nx.grid_2d_graph(20, 20)
+            graph = nx.grid_2d_graph(5, 5)
             graph = nx.convert_node_labels_to_integers(graph)
 
             feature = np.identity(graph.number_of_nodes())
@@ -384,4 +384,10 @@ def load_graphs(dataset_str):
 
 def load_tg_dataset(name='communities'):
     graphs, features, edge_labels,_,_,_,_ = load_graphs(name)
-    return nx_to_tg_data(graphs, features, edge_labels)
+    res=nx_to_tg_data(graphs, features, edge_labels)
+    for i, data in enumerate(res):
+        edges = data.edge_index.T
+        edges = torch.cat((edges, torch.ones(edges.shape[0],1)), dim=1)
+        np.savetxt(f"/Users/shiningsunnyday/Documents/GitHub/GNNMDP/LP_algo/{name}/{i}.txt", edges, fmt="%d")
+
+    return res

@@ -36,6 +36,11 @@ def get_edge_mask_link_negative(mask_link_positive, num_nodes, num_negtive_edges
     return mask_link_negative
 
 def resample_edge_mask_link_negative(data):
+    """
+    sample negatives from undirected positive edges
+    negative train edges exclude positive train edges
+    negative val/test edges exclude all positive edges
+    """
     data.mask_link_negative_train = get_edge_mask_link_negative(data.mask_link_positive_train, num_nodes=data.num_nodes,
                                                       num_negtive_edges=data.mask_link_positive_train.shape[1])
     data.mask_link_negative_val = get_edge_mask_link_negative(data.mask_link_positive, num_nodes=data.num_nodes,

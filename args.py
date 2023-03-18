@@ -53,6 +53,9 @@ def make_args():
     parser.add_argument('--repeat_num', dest='repeat_num', default=2, type=int) # 10
     parser.add_argument('--epoch_log', dest='epoch_log', default=10, type=int)
 
+    # pretrain
+    parser.add_argument('--pretrain_task', dest='pretrain_task', default='mdp', type=str)
+
     parser.set_defaults(gpu=True, task='link', model='GCN', dataset='All',
                         cache=False, rm_feature=False,
                         permute=True, feature_pre=True, dropout=True,
