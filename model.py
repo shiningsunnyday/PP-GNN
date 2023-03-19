@@ -253,6 +253,11 @@ class PGNN(torch.nn.Module):
         self.feature_pre = feature_pre
         self.layer_num = layer_num
         self.dropout = dropout
+        self.output_dim = output_dim
+        self.hidden_dim = hidden_dim
+        self.feature_dim = feature_dim
+        self.input_dim = input_dim
+        
         if layer_num == 1:
             hidden_dim = output_dim
         if feature_pre:

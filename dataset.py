@@ -234,7 +234,7 @@ def load_graphs(dataset_str):
         graphs = []
         features = []
         for _ in range(1):
-            graph = nx.grid_2d_graph(5, 5)
+            graph = nx.grid_2d_graph(10, 10)
             graph = nx.convert_node_labels_to_integers(graph)
 
             feature = np.identity(graph.number_of_nodes())

@@ -31,6 +31,13 @@ def format(data_list):
     adjs = []
     for _, data in enumerate(data_list):
         ntable, edges = compute_ntable(data)
+        data.ntable = ntable
+        nr_degree = []
+        for i in range(len(ntable)):
+            nr_degree.append(len(ntable[i]))
+        nr_degree = torch.tensor(nr_degree).reshape(-1,1)    
+        data.nr_degree = nr_degree
+            
         ntables.append(ntable)
         adj = sp.coo_matrix((np.ones(edges.shape[1]), (edges[0], edges[1])),
                     shape=(len(ntable), len(ntable)),

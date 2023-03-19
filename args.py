@@ -54,7 +54,7 @@ def make_args():
     parser.add_argument('--epoch_log', dest='epoch_log', default=10, type=int)
 
     # pretrain
-    parser.add_argument('--pretrain_task', dest='pretrain_task', default='mdp', type=str)
+    parser.add_argument('--pretrain_task', dest='pretrain_task', default='', type=str)
 
     parser.set_defaults(gpu=True, task='link', model='GCN', dataset='All',
                         cache=False, rm_feature=False,

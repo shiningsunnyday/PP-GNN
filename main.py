@@ -79,7 +79,7 @@ for task in ['link', 'link_pair']:
 
             # pretrain
             if args.pretrain_task:
-                model = getattr(pretrain, args.pretrain_task)(model, data_list, *pargs, **kwargs)
+                model, G = getattr(pretrain, args.pretrain_task)(model, data_list, *pargs, **kwargs)
             else:
                 # data
                 for i,data in enumerate(data_list):
@@ -105,7 +105,10 @@ for task in ['link', 'link_pair']:
                 for id, data in enumerate(data_list[:effective_len]):
                     if args.permute:
                         preselect_anchor(data, layer_num=args.layer_num, anchor_num=args.anchor_num, device=device)
-                    out = model(data)
+                    if args.pretrain_task:
+                        out = model(G, data)
+                    else:
+                        out = model(data)
                     # get_link_mask(data,resplit=False)  # resample negative links
                     edge_mask_train = np.concatenate((data.mask_link_positive_train, data.mask_link_negative_train), axis=-1)
                     nodes_first = torch.index_select(out, 0, torch.from_numpy(edge_mask_train[0,:]).long().to(device))
@@ -147,7 +150,10 @@ for task in ['link', 'link_pair']:
                     emb_norm_max = 0
                     emb_norm_mean = 0
                     for id, data in enumerate(data_list):
-                        out = model(data)
+                        if args.pretrain_task:
+                            out = model(G, data)
+                        else:
+                            out = model(data)
                         emb_norm_min += torch.norm(out.data, dim=1).min().cpu().numpy()
                         emb_norm_max += torch.norm(out.data, dim=1).max().cpu().numpy()
                         emb_norm_mean += torch.norm(out.data, dim=1).mean().cpu().numpy()
@@ -217,8 +223,13 @@ for task in ['link', 'link_pair']:
         results_std = np.std(results).round(6)
         print('-----------------Final-------------------')
         print(results_mean, results_std)
-        with open('results/{}_{}_{}_layer{}_approximate{}.txt'.format(args.task,args.model,dataset_name,args.layer_num,args.approximate), 'w') as f:
+        # with open('results/{}_{}_{}_layer{}_approximate{}.txt'.format(args.task,args.model,dataset_name,args.layer_num,args.approximate), 'w') as f:
+        hash_val = dict_hash(args.__dict__)
+        with open(f'results/{hash_val}.txt', 'w+') as f:            
+            for k, v in args.__dict__.items():
+                f.write(f'{k}={v}\n')
             f.write('{}, {}\n'.format(results_mean, results_std))
+
 
 # export scalar data to JSON for external processing
 writer_train.export_scalars_to_json("./all_scalars.json")
