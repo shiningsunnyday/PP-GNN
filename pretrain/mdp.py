@@ -4,6 +4,7 @@ from model import PGNN
 import torch.nn.functional as F
 from pretrain.utils import format, join_cuts
 import torch
+import dgl
 import argparse
 
 class PPGNN(PGNN):
@@ -43,9 +44,22 @@ def pretrain(model, dataset, args, *pargs, **kwargs):
         models.append(model)
         Gs.append(G)
 
-    models, Gs = join_cuts(models, cuts, dataset) # from cuts per dataset to one (model, G) per dataset
+    if args.cut_size == -1:
+        return models[0], Gs[0]
+    else:
+        Gs = []
+
+    models = join_cuts(models, cuts) # from cuts per dataset to one (model, G) per dataset    
+    model = models[0] # for now assume only one pretraining dataset   
+    _, adjs, _ = format(-1, dataset) # format the original dataset
+    for adj, data in zip(adjs, dataset):
+        edges = data.edge_index
+        edges = torch.cat((edges, torch.flip(edges,dims=(0,))), dim=1)
+        G = dgl.from_scipy(adj)
+        G = dgl.add_self_loop(G)
+        Gs.append(G)
+
     G = Gs[0] # for now assume one pretraining dataset
-    model = models[0] # for now assume only one pretraining dataset    
     model = PPGNN(model, *pargs, **kwargs)
     return model, G
     

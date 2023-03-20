@@ -79,12 +79,12 @@ def cut(data, cut_size, max_iter=2):
 def format(cut_size, data_list):
     new_data_list = []
     for data in data_list:
-        if cut_size == -1 or cut_size == len(data.x):
+        if cut_size == -1:
             new_data_list.append(data)
         else:
             new_data_list += cut(data, cut_size)
-        
-    data_list = new_data_list
+    if cut_size > -1:
+        data_list = new_data_list
 
     ntables, adjs, cuts = [], [], []
     for _, data in enumerate(data_list):
@@ -101,16 +101,17 @@ def format(cut_size, data_list):
                     shape=(len(ntable), len(ntable)),
                     dtype=np.float32)
         adjs.append(adj)
+        if cut_size == -1:
+            continue
         if data.cut_info[0] == 0:
             cuts.append([])
         cuts[-1].append(data.cut_info[-1])
     return ntables, adjs, cuts
 
 
-def join_cuts(models, cuts_list, data_list):
+def join_cuts(models, cuts_list):
     models.reverse()
     new_models = []
-    new_Gs = []
     for cuts in cuts_list:        
         new_model = deepcopy(models[-1]) # how to join models, weight space averaging?
         N = sum([len(c) for c in cuts])
@@ -121,16 +122,5 @@ def join_cuts(models, cuts_list, data_list):
         new_model.mask = nn.Embedding.from_pretrained(mask_weight)
         new_models.append(new_model)
 
-    for data in data_list:
-        edges = data.edge_index
-        edges = torch.cat((edges, torch.flip(edges,dims=(0,))), dim=1)
-        N = len(data.x)
-        adj = sp.coo_matrix((np.ones(edges.shape[1]), (edges[0], edges[1])),
-                shape=(N, N),
-                dtype=np.float32)
-        G = dgl.from_scipy(adj)
-        G = dgl.add_self_loop(G)
-        new_Gs.append(G)
-
-    return new_models, new_Gs
+    return new_models
 
