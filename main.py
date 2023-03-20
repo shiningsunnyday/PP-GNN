@@ -79,7 +79,7 @@ for task in ['link', 'link_pair']:
 
             # pretrain
             if args.pretrain_task:
-                model, G = getattr(pretrain, args.pretrain_task)(model, data_list, *pargs, **kwargs)
+                model, G = getattr(pretrain, args.pretrain_task)(model, data_list, args, *pargs, **kwargs)
             else:
                 # data
                 for i,data in enumerate(data_list):

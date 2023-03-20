@@ -2,7 +2,7 @@ from pretrain.GNNMDP.gnn_solver import pretrain_gnn_mdp
 from pretrain.GNNMDP.models.gnn import GCN
 from model import PGNN
 import torch.nn.functional as F
-from pretrain.utils import format
+from pretrain.utils import format, join_cuts
 import torch
 import argparse
 
@@ -24,32 +24,28 @@ class PPGNN(PGNN):
         return res
     
 
-def pretrain(model, dataset, *pargs, **kwargs):
+def pretrain(model, dataset, args, *pargs, **kwargs):
     """
     in: p-gnn model, list of [data]
     out: every data.dists_max, data.dists_argmax updated
     """
-    ntables, adjs = format(dataset) # convert to mdp format
+    ntables, adjs, cuts = format(args.cut_size, dataset) # convert to mdp format
     parser = argparse.ArgumentParser()
-    args = parser.parse_args([])
+    mdp_args = parser.parse_args([])
     Gs = []
     models = []
     for ntable, adj in zip(ntables, adjs):
-        args.hidden = 32
-        args.num_hidden_layers = 2
-        args.mask_c = 3.0
-        args.lr = 0.03
-        args.weight_decay = 0.0
-        args.epochs = 100
-        args.batch_size = 1
-        model, G = pretrain_gnn_mdp(args, 'gcn', adj, ntable)[0]
-        mdp = (F.gumbel_softmax(model.mask.weight,hard=True)[:, :1].T).sum()
-        print(f"{mdp}")
+        for k, v in args.__dict__.items():
+            if 'mdp_' in k:
+                setattr(mdp_args, k[4:], v)
+
+        model, G = pretrain_gnn_mdp(mdp_args, 'gcn', adj, ntable)[0] # if not gcn, need to worry about disconnected components
         models.append(model)
         Gs.append(G)
 
-    model = models[0]   
-    G = Gs[0]
+    models, Gs = join_cuts(models, cuts, dataset) # from cuts per dataset to one (model, G) per dataset
+    G = Gs[0] # for now assume one pretraining dataset
+    model = models[0] # for now assume only one pretraining dataset    
     model = PPGNN(model, *pargs, **kwargs)
     return model, G
     

@@ -88,15 +88,16 @@ def get_tg_dataset(args, dataset_name, use_cache=True, remove_feature=False):
         links_val_list = []
         links_test_list = []
         for i, data in enumerate(dataset):
+            print(f"get_tg_dataset (and compute shortest paths) {i}")
             if 'link' in args.task:
                 get_link_mask(data, args.remove_link_ratio, resplit=True,
-                              infer_link_positive=True if args.task == 'link' else False)
+                            infer_link_positive=True if args.task == 'link' else False)
             links_train_list.append(data.mask_link_positive_train)
             links_val_list.append(data.mask_link_positive_val)
             links_test_list.append(data.mask_link_positive_test)
             if args.task=='link':
                 dists_removed = precompute_dist_data(data.mask_link_positive_train, data.num_nodes,
-                                                     approximate=args.approximate)
+                                                    approximate=args.approximate)
                 dists_removed_list.append(dists_removed)
                 data.dists = torch.from_numpy(dists_removed).float()
                 data.edge_index = torch.from_numpy(duplicate_edges(data.mask_link_positive_train)).long()
@@ -129,6 +130,7 @@ def get_tg_dataset(args, dataset_name, use_cache=True, remove_feature=False):
 def nx_to_tg_data(graphs, features, edge_labels=None):
     data_list = []
     for i in range(len(graphs)):
+        print(f"nx_to_tg {i}")
         feature = features[i]
         graph = graphs[i].copy()
         graph.remove_edges_from(graph.selfloop_edges())
@@ -247,8 +249,8 @@ def load_graphs(dataset_str):
         node_labels = []
         edge_labels = []
         for i in range(1):
-            community_size = 20
-            community_num = 20
+            community_size = 10
+            community_num = 10
             p=0.01
 
             graph = nx.connected_caveman_graph(community_num, community_size)
@@ -364,6 +366,10 @@ def load_graphs(dataset_str):
             node_dict[node] = id
 
         comps = [comp for comp in nx.connected_components(G) if len(comp)>10]
+        comps = comps[:4]
+
+
+
         graphs = [G.subgraph(comp) for comp in comps]
 
         id_all = []
@@ -385,9 +391,9 @@ def load_graphs(dataset_str):
 def load_tg_dataset(name='communities'):
     graphs, features, edge_labels,_,_,_,_ = load_graphs(name)
     res=nx_to_tg_data(graphs, features, edge_labels)
-    for i, data in enumerate(res):
-        edges = data.edge_index.T
-        edges = torch.cat((edges, torch.ones(edges.shape[0],1)), dim=1)
-        np.savetxt(f"/Users/shiningsunnyday/Documents/GitHub/GNNMDP/LP_algo/{name}/{i}.txt", edges, fmt="%d")
+    # for i, data in enumerate(res):
+    #     edges = data.edge_index.T
+    #     edges = torch.cat((edges, torch.ones(edges.shape[0],1)), dim=1)
+    #     np.savetxt(f"/Users/shiningsunnyday/Documents/GitHub/GNNMDP/LP_algo/{name}/{i}.txt", edges, fmt="%d")
 
     return res

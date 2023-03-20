@@ -39,7 +39,7 @@ def make_args():
     parser.add_argument('--approximate', dest='approximate', default=-1, type=int,
                         help='k-hop shortest path distance. -1 means exact shortest path') # -1, 2
 
-    parser.add_argument('--batch_size', dest='batch_size', default=8, type=int) # implemented via accumulating gradient
+    parser.add_argument('--batch_size', dest='batch_size', default=8, type=int) # implemented via accumulating gradient    
     parser.add_argument('--layer_num', dest='layer_num', default=2, type=int)
     parser.add_argument('--feature_dim', dest='feature_dim', default=32, type=int)
     parser.add_argument('--hidden_dim', dest='hidden_dim', default=32, type=int)
@@ -54,8 +54,16 @@ def make_args():
     parser.add_argument('--epoch_log', dest='epoch_log', default=10, type=int)
 
     # pretrain
-    parser.add_argument('--pretrain_task', dest='pretrain_task', default='', type=str)
-
+    parser.add_argument('--cut_size', default=100, type=int) # added for mdp
+    parser.add_argument('--pretrain_task', dest='pretrain_task', default='', type=str) 
+    parser.add_argument('--mdp_hidden', default=32, type=int)
+    parser.add_argument('--mdp_num_hidden_layers', default=2, type=int)
+    parser.add_argument('--mdp_mask_c', default=3.0, type=float)
+    parser.add_argument('--mdp_lr', default=0.03, type=float)
+    parser.add_argument('--mdp_weight_decay', default=0.0, type=float)
+    parser.add_argument('--mdp_epochs', default=100, type=int)
+    parser.add_argument('--mdp_batch_size', default=1, type=int)    
+    
     parser.set_defaults(gpu=True, task='link', model='GCN', dataset='All',
                         cache=False, rm_feature=False,
                         permute=True, feature_pre=True, dropout=True,

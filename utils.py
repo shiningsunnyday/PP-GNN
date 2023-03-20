@@ -137,8 +137,10 @@ def get_link_mask(data, remove_ratio=0.2, resplit=True, infer_link_positive=True
     resample_edge_mask_link_negative(data)
 
 
-def add_nx_graph(data):
+def add_nx_graph(data, connected=True):
     G = nx.Graph()
+    if not connected:
+        G.add_nodes_from(range(len(data.x)))
     edge_numpy = data.edge_index.numpy()
     edge_list = []
     for i in range(data.num_edges):
@@ -189,7 +191,7 @@ def precompute_dist_data(edge_index, num_nodes, approximate=0):
         dists_array = np.zeros((n, n))
         # dists_dict = nx.all_pairs_shortest_path_length(graph,cutoff=approximate if approximate>0 else None)
         # dists_dict = {c[0]: c[1] for c in dists_dict}
-        dists_dict = all_pairs_shortest_path_length_parallel(graph,cutoff=approximate if approximate>0 else None)
+        dists_dict = all_pairs_shortest_path_length_parallel(graph,cutoff=approximate if approximate>0 else None,num_workers=16)
         for i, node_i in enumerate(graph.nodes()):
             shortest_dist = dists_dict[node_i]
             for j, node_j in enumerate(graph.nodes()):
