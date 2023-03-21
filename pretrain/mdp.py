@@ -7,8 +7,6 @@ from utils import hash_tensor
 import torch
 import dgl
 import argparse
-import os
-import pickle
 
 class PPGNN(PGNN):
     def __init__(self, model, mask_weight, *pargs, **kwargs):
@@ -35,24 +33,13 @@ def pretrain(model, dataset, args, *pargs, **kwargs):
     in: p-gnn model, list of [data]
     out: every data.dists_max, data.dists_argmax updated
     """
-    if args.cache:
-        path = 'datasets/cache/format/'
-        os.makedirs(path,exist_ok=True)
-        dataset_tensor = torch.cat(tuple(data.edge_index for data in dataset),dim=0)
-        tensor_hash = hash_tensor(dataset_tensor)
-        hash_str = f"{args.cut_size}_{tensor_hash}"
-        if os.path.exists(path+f"{hash_str}.pkl"):
-            data = pickle.load(open(path+f"{hash_str}.pkl","rb"))
-            print(f"loaded {hash_str}")
-            ntables, adjs, cuts = data
-        else:
-            ntables, adjs, cuts = format(args.cut_size, dataset)
-            pickle.dump([ntables,adjs,cuts],open(path+f"{hash_str}.pkl","wb+"))
-            print(f"saved {hash_str}")
-    else:
-        ntables, adjs, cuts = format(args.cut_size, dataset) # convert to mdp format
+    path = 'datasets/cache/format/'    
+    tensor_hash = hash_tensor([data.edge_index for data in dataset])
+    hash_str = f"{args.cut_size}_{tensor_hash}"
+    cache_path = path+f"{hash_str}.pkl" if args.cache else ""
+    ntables, adjs, cuts = format(args.cut_size, dataset, cache_path) # convert to mdp format
 
-
+    breakpoint()
     parser = argparse.ArgumentParser()
     mdp_args = parser.parse_args([])
     Gs = []

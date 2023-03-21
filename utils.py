@@ -5,6 +5,7 @@ import multiprocessing as mp
 import random
 import hashlib
 import json
+from tqdm import tqdm
 
 random.seed(123)
 np.random.seed(123)
@@ -21,7 +22,8 @@ def dict_hash(dictionary) -> str:
 
 
 def hash_tensor(tensor):
-    return hashlib.sha1(np.ascontiguousarray(tensor.numpy())).hexdigest()
+    if isinstance(tensor,list):
+        return hashlib.sha1(''.join([hash_tensor(t) for t in tensor]).encode('utf-8'))
 
 
 # # approximate
@@ -157,7 +159,7 @@ def add_nx_graph(data, connected=True):
 
 def single_source_shortest_path_length_range(graph, node_range, cutoff):
     dists_dict = {}
-    for node in node_range:
+    for node in tqdm(node_range):
         dists_dict[node] = nx.single_source_shortest_path_length(graph, node, cutoff)
     return dists_dict
 

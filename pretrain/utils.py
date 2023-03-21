@@ -10,6 +10,8 @@ from networkx.algorithms.community import kernighan_lin_bisection
 from torch_geometric.data import Data
 import dgl
 import torch.nn as nn
+import os
+import pickle
 
 def check(dist_row, n, N):
     res = set()
@@ -76,7 +78,7 @@ def cut(data, cut_size, max_iter=2):
     return cuts_data
 
 
-def format(cut_size, data_list):
+def format(cut_size, data_list, cache_path=""):
     new_data_list = []
     for data in data_list:
         if cut_size == -1:
@@ -86,8 +88,16 @@ def format(cut_size, data_list):
     if cut_size > -1:
         data_list = new_data_list
 
-    ntables, adjs, cuts = [], [], []
-    for _, data in enumerate(data_list):
+    ntables, adjs, cuts = [], [], []    
+    if cache_path:
+        os.makedirs(cache_path,exist_ok=True)
+        if os.path.exists(cache_path):
+            data = pickle.load(open(cache_path,"rb"))            
+            ntables, adjs, cuts = data  
+            print(f"loaded {cache_path}, {len(ntables)}/{len(data_list)} done")
+
+    num_cached = len(ntables)
+    for _, data in enumerate(data_list[num_cached:]):
         ntable, edges = compute_ntable(data)
         data.ntable = ntable
         nr_degree = []
@@ -106,6 +116,10 @@ def format(cut_size, data_list):
         if data.cut_info[0] == 0:
             cuts.append([])
         cuts[-1].append(data.cut_info[-1])
+        if cache_path:
+            pickle.dump([ntables,adjs,cuts],open(cache_path,"wb+"))
+            print(f"saved {cache_path}, {len(ntables)}/{len(data_list)} done")            
+
     return ntables, adjs, cuts
 
 

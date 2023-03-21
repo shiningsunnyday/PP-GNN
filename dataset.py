@@ -366,7 +366,6 @@ def load_graphs(dataset_str):
             node_dict[node] = id
 
         comps = [comp for comp in nx.connected_components(G) if len(comp)>10]
-        comps = comps[:4]
 
 
 
