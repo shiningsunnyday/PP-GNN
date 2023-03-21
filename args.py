@@ -62,7 +62,8 @@ def make_args():
     parser.add_argument('--mdp_lr', default=0.03, type=float)
     parser.add_argument('--mdp_weight_decay', default=0.0, type=float)
     parser.add_argument('--mdp_epochs', default=100, type=int)
-    parser.add_argument('--mdp_batch_size', default=1, type=int)    
+    parser.add_argument('--mdp_batch_size', default=1, type=int)
+    parser.add_argument('--anchors_only', default=False, type=bool)
     
     parser.set_defaults(gpu=True, task='link', model='GCN', dataset='All',
                         cache=False, rm_feature=False,

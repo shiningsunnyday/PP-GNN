@@ -8,17 +8,19 @@ import dgl
 import argparse
 
 class PPGNN(PGNN):
-    def __init__(self, model, *pargs, **kwargs):
+    def __init__(self, model, mask_weight, *pargs, **kwargs):
         super(PPGNN, self).__init__(*pargs, **kwargs)
         self.pretrained_model = model
-        self.mask_ = F.gumbel_softmax(model.mask.weight,hard=True)[:, 0].T.clone().detach()
-        for x, p in self.pretrained_model.named_parameters():
-            p.requires_grad_(False)   
+        self.mask_ = F.gumbel_softmax(mask_weight,hard=True)[:, 0].T.clone().detach()
+        if self.pretrained_model:
+            for x, p in self.pretrained_model.named_parameters():
+                p.requires_grad_(False)   
         
 
     def forward(self, G, data):
-        data.x = torch.cat([data.x, data.nr_degree],dim=-1)
-        data.x = self.pretrained_model(G, data.x)
+        if self.pretrained_model:
+            data.x = torch.cat([data.x, data.nr_degree],dim=-1)
+            data.x = self.pretrained_model(G, data.x)
         data.dists_argmax = torch.arange(len(data.x))[self.mask_==1][None].expand((len(data.x),-1))
         data.dists_max = 1/(1+data.dists[:, self.mask_==1])
         res = super(PPGNN, self).forward(data)
@@ -60,6 +62,9 @@ def pretrain(model, dataset, args, *pargs, **kwargs):
         Gs.append(G)
 
     G = Gs[0] # for now assume one pretraining dataset
-    model = PPGNN(model, *pargs, **kwargs)
+    if args.anchors_only:
+        model = PPGNN(None, model.mask.weight, *pargs, **kwargs)
+    else:
+        model = PPGNN(model, model.mask.weight, *pargs, **kwargs)
     return model, G
     

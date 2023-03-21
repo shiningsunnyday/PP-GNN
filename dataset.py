@@ -249,8 +249,8 @@ def load_graphs(dataset_str):
         node_labels = []
         edge_labels = []
         for i in range(1):
-            community_size = 10
-            community_num = 10
+            community_size = 20
+            community_num = 20
             p=0.01
 
             graph = nx.connected_caveman_graph(community_num, community_size)
