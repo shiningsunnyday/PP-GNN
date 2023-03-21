@@ -3,9 +3,12 @@ from pretrain.GNNMDP.models.gnn import GCN
 from model import PGNN
 import torch.nn.functional as F
 from pretrain.utils import format, join_cuts
+from utils import hash_tensor
 import torch
 import dgl
 import argparse
+import os
+import pickle
 
 class PPGNN(PGNN):
     def __init__(self, model, mask_weight, *pargs, **kwargs):
@@ -32,7 +35,24 @@ def pretrain(model, dataset, args, *pargs, **kwargs):
     in: p-gnn model, list of [data]
     out: every data.dists_max, data.dists_argmax updated
     """
-    ntables, adjs, cuts = format(args.cut_size, dataset) # convert to mdp format
+    if args.cache:
+        path = 'datasets/cache/format/'
+        os.makedirs(path,exist_ok=True)
+        dataset_tensor = torch.cat(tuple(data.edge_index for data in dataset),dim=0)
+        tensor_hash = hash_tensor(dataset_tensor)
+        hash_str = f"{args.cut_size}_{tensor_hash}"
+        if os.path.exists(path+f"{hash_str}.pkl"):
+            data = pickle.load(open(path+f"{hash_str}.pkl","rb"))
+            print(f"loaded {hash_str}")
+            ntables, adjs, cuts = data
+        else:
+            ntables, adjs, cuts = format(args.cut_size, dataset)
+            pickle.dump([ntables,adjs,cuts],open(path+f"{hash_str}.pkl","wb+"))
+            print(f"saved {hash_str}")
+    else:
+        ntables, adjs, cuts = format(args.cut_size, dataset) # convert to mdp format
+
+
     parser = argparse.ArgumentParser()
     mdp_args = parser.parse_args([])
     Gs = []

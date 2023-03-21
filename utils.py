@@ -6,6 +6,9 @@ import random
 import hashlib
 import json
 
+random.seed(123)
+np.random.seed(123)
+torch.manual_seed(123)
 
 def dict_hash(dictionary) -> str:
     """MD5 hash of a dictionary."""
@@ -15,6 +18,10 @@ def dict_hash(dictionary) -> str:
     encoded = json.dumps(dictionary, sort_keys=True).encode()
     dhash.update(encoded)
     return dhash.hexdigest()
+
+
+def hash_tensor(tensor):
+    return hashlib.sha1(np.ascontiguousarray(tensor.numpy())).hexdigest()
 
 
 # # approximate

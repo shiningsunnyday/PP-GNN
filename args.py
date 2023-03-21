@@ -12,7 +12,7 @@ def make_args():
                         help='All; Cora; grid; communities; ppi')
     parser.add_argument('--gpu', dest='gpu', action='store_true',
                         help='whether use gpu')
-    parser.add_argument('--cache_no', dest='cache', action='store_false',
+    parser.add_argument('--cache', dest='cache', action='store_true',
                         help='whether use cache')
     parser.add_argument('--cpu', dest='gpu', action='store_false',
                         help='whether use cpu')
