@@ -13,15 +13,14 @@ import torch.nn as nn
 import os
 import pickle
 
-def check(dist_row, n, N):
+def check(dist_matrix, n, N):
     res = set()
     for i in range(N):
         for j in range(i+1, N):
-            if dist_row[i] == dist_row[j]:
+            if dist_matrix[n][i] == dist_matrix[n][j]:
                 res.add(N*i+j)
     # inds = inds[np.argwhere(dist_row[inds[:,0]] == dist_row[inds[:,1]]).flatten()]
     # res += set((N*inds[:,0]+inds[:,1]).tolist())
-    print(f"finished {n}")
     return res
 
 def compute_ntable(data):
@@ -30,10 +29,10 @@ def compute_ntable(data):
     dist_matrix = 1/data.dists - 1
     ntable = defaultdict(set)
     N = dist_matrix.shape[0]
-    p = Pool(16)
+    p = Pool(8)
     # inds = np.array([[i,j] for i in range(N) for j in range(N)])    
     # pargs = [(dist_matrix[i], inds, i, N) for i in range(N)]
-    res = p.starmap(check, [(dist_matrix[i], i, N) for i in range(N)])
+    res = p.starmap(check, [(dist_matrix, i, N) for i in range(N)])
     # res = []
     # for parg in pargs:
     #     res.append(check(*parg))
@@ -42,7 +41,7 @@ def compute_ntable(data):
         ntable[i] = rset
     return ntable, edges
 
-def cut(data, cut_size, max_iter=2):
+def cut(data, cut_size, max_iter=1):
     add_nx_graph(data, False)
     assert len(data.G) == len(data.x)
     q = Queue()
@@ -79,22 +78,38 @@ def cut(data, cut_size, max_iter=2):
 
 
 def format(cut_size, data_list, cache_path=""):
-    new_data_list = []
-    for data in data_list:
+    cuts_cache_path = cache_path.replace(".pkl","_cuts.pkl")
+    if cut_size > -1 and os.path.exists(cuts_cache_path):
+        num_cuts, new_data_list = pickle.load(open(cuts_cache_path,"rb"))
+        print(f"loaded {num_cuts}/{len(data_list)} cuts for {cache_path}")
+    else:
+        num_cuts, new_data_list = 0, []
+        if cut_size > -1:
+            print(f"loaded 0/{len(data_list)} cuts for {cache_path}")
+
+    for i,data in enumerate(data_list[num_cuts:]):
         if cut_size == -1:
             new_data_list.append(data)
         else:
             new_data_list += cut(data, cut_size)
+            if cache_path:
+                pickle.dump([i+1,new_data_list],open(cuts_cache_path,"wb+"))
+                print(f"saved {i+1}/{len(data_list)} cuts")
+
     if cut_size > -1:
         data_list = new_data_list
 
     ntables, adjs, cuts = [], [], []    
     if cache_path:
-        os.makedirs(cache_path,exist_ok=True)
+        os.makedirs(os.path.dirname(cache_path),exist_ok=True)
         if os.path.exists(cache_path):
             data = pickle.load(open(cache_path,"rb"))            
+            print(f"loading from {cache_path}")
             ntables, adjs, cuts = data  
             print(f"loaded {cache_path}, {len(ntables)}/{len(data_list)} done")
+        else:            
+            pickle.dump([[],[],[]],open(cache_path,"wb+"))
+            print(f"saved {cache_path}, 0/{len(data_list)} done") 
 
     num_cached = len(ntables)
     for _, data in enumerate(data_list[num_cached:]):

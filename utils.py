@@ -23,7 +23,8 @@ def dict_hash(dictionary) -> str:
 
 def hash_tensor(tensor):
     if isinstance(tensor,list):
-        return hashlib.sha1(''.join([hash_tensor(t) for t in tensor]).encode('utf-8'))
+        return hashlib.sha1(''.join([hash_tensor(t) for t in tensor]).encode('utf-8')).hexdigest()
+    return hashlib.sha1(np.ascontiguousarray(tensor.numpy())).hexdigest()
 
 
 # # approximate
@@ -200,7 +201,7 @@ def precompute_dist_data(edge_index, num_nodes, approximate=0):
         dists_array = np.zeros((n, n))
         # dists_dict = nx.all_pairs_shortest_path_length(graph,cutoff=approximate if approximate>0 else None)
         # dists_dict = {c[0]: c[1] for c in dists_dict}
-        dists_dict = all_pairs_shortest_path_length_parallel(graph,cutoff=approximate if approximate>0 else None,num_workers=16)
+        dists_dict = all_pairs_shortest_path_length_parallel(graph,cutoff=approximate if approximate>0 else None,num_workers=8)
         for i, node_i in enumerate(graph.nodes()):
             shortest_dist = dists_dict[node_i]
             for j, node_j in enumerate(graph.nodes()):

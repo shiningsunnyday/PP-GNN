@@ -35,7 +35,7 @@ def pretrain(model, dataset, args, *pargs, **kwargs):
     """
     path = 'datasets/cache/format/'    
     tensor_hash = hash_tensor([data.edge_index for data in dataset])
-    hash_str = f"{args.cut_size}_{tensor_hash}"
+    hash_str = f"{args.approximate}-{args.cut_size}_{tensor_hash}"
     cache_path = path+f"{hash_str}.pkl" if args.cache else ""
     ntables, adjs, cuts = format(args.cut_size, dataset, cache_path) # convert to mdp format
 
