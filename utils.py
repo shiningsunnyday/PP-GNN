@@ -1,7 +1,6 @@
 import torch
 import networkx as nx
 import numpy as np
-import multiprocessing as mp
 import random
 import hashlib
 import json
@@ -177,7 +176,7 @@ def all_pairs_shortest_path_length_parallel(graph,cutoff=None,num_workers=4):
         num_workers = int(num_workers/4)
     elif len(nodes)<400:
         num_workers = int(num_workers/2)
-
+    import multiprocessing as mp
     pool = mp.Pool(processes=num_workers)
     results = [pool.apply_async(single_source_shortest_path_length_range,
             args=(graph, nodes[int(len(nodes)/num_workers*i):int(len(nodes)/num_workers*(i+1))], cutoff)) for i in range(num_workers)]

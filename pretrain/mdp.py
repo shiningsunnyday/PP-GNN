@@ -39,7 +39,6 @@ def pretrain(model, dataset, args, *pargs, **kwargs):
     cache_path = path+f"{hash_str}.pkl" if args.cache else ""
     ntables, adjs, cuts = format(args.cut_size, dataset, cache_path) # convert to mdp format
 
-    breakpoint()
     parser = argparse.ArgumentParser()
     mdp_args = parser.parse_args([])
     Gs = []
@@ -48,7 +47,6 @@ def pretrain(model, dataset, args, *pargs, **kwargs):
         for k, v in args.__dict__.items():
             if 'mdp_' in k:
                 setattr(mdp_args, k[4:], v)
-
         model, G = pretrain_gnn_mdp(mdp_args, 'gcn', adj, ntable)[0] # if not gcn, need to worry about disconnected components
         models.append(model)
         Gs.append(G)

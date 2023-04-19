@@ -54,7 +54,7 @@ def make_args():
     parser.add_argument('--epoch_log', dest='epoch_log', default=10, type=int)
 
     # pretrain
-    parser.add_argument('--cut_size', default=100, type=int) # added for mdp
+    parser.add_argument('--cut_size', default=-1, type=int) # added for mdp
     parser.add_argument('--pretrain_task', dest='pretrain_task', default='', type=str) 
     parser.add_argument('--mdp_hidden', default=32, type=int)
     parser.add_argument('--mdp_num_hidden_layers', default=2, type=int)
