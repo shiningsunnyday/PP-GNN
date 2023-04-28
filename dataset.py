@@ -33,7 +33,7 @@ def get_tg_dataset(args, dataset_name, use_cache=True, remove_feature=False):
         dataset = tg.datasets.Planetoid(root='datasets/' + dataset_name, name=dataset_name)
     else:
         try:
-            dataset = load_tg_dataset(dataset_name)
+            dataset = load_tg_dataset(dataset_name, args.dataset_num)
         except:
             raise NotImplementedError
 
@@ -78,7 +78,8 @@ def get_tg_dataset(args, dataset_name, use_cache=True, remove_feature=False):
             else:
                 data.dists = torch.from_numpy(dists_list[i]).float()
             if remove_feature:
-                data.x = torch.ones((data.x.shape[0],1))
+                # data.x = torch.ones((data.x.shape[0],1))
+                data.x = torch.ones((data.x.shape[0],data.x.shape[0])) # for p-gnn
             data_list.append(data)
     else:
         data_list = []
@@ -107,7 +108,7 @@ def get_tg_dataset(args, dataset_name, use_cache=True, remove_feature=False):
                 dists_list.append(dists)
                 data.dists = torch.from_numpy(dists).float()
             if remove_feature:
-                data.x = torch.ones((data.x.shape[0],1))
+                data.x = torch.ones((data.x.shape[0],data.x.shape[0])) # for p-gnn
             data_list.append(data)
 
         with open(f1_name, 'wb') as f1, \
@@ -225,7 +226,7 @@ def Graph_load_batch(min_num_nodes = 20, max_num_nodes = 1000, name = 'ENZYMES',
 
 
 # main data load function
-def load_graphs(dataset_str):
+def load_graphs(dataset_str, dataset_num):
     node_labels = [None]
     edge_labels = [None]
     idx_train = [None]
@@ -282,6 +283,7 @@ def load_graphs(dataset_str):
     elif dataset_str == 'protein':
 
         graphs_all, features_all, labels_all = Graph_load_batch(name='PROTEINS_full')
+
         features_all = (features_all-np.mean(features_all,axis=-1,keepdims=True))/np.std(features_all,axis=-1,keepdims=True)
         graphs = []
         features = []
@@ -305,6 +307,12 @@ def load_graphs(dataset_str):
 
         print('final num', len(graphs))
 
+        # added for pp-gnn
+        if dataset_num:
+            graphs = graphs[int(dataset_num)-1:int(dataset_num)]
+            features = features[int(dataset_num)-1:int(dataset_num)]
+            edge_labels = edge_labels[int(dataset_num)-1:int(dataset_num)]
+
 
     elif dataset_str == 'email':
 
@@ -321,6 +329,11 @@ def load_graphs(dataset_str):
                 graph.remove_edge(edge[0], edge[1])
 
         comps = [comp for comp in nx.connected_components(graph) if len(comp)>10]
+
+        # added for pp-gnn
+        if dataset_num:
+            comps = comps[int(dataset_num)-1:int(dataset_num)]
+
         graphs = [graph.subgraph(comp) for comp in comps]
 
         edge_labels = []
@@ -328,7 +341,8 @@ def load_graphs(dataset_str):
 
         for g in graphs:
             n = g.number_of_nodes()
-            feature = np.ones((n, 1))
+            # feature = np.ones((n, 1))
+            feature = np.ones((n, n)) # for pp-gnn
             features.append(feature)
 
             label = np.zeros((n, n),dtype=int)
@@ -387,8 +401,8 @@ def load_graphs(dataset_str):
     return graphs, features, edge_labels, node_labels, idx_train, idx_val, idx_test
 
 
-def load_tg_dataset(name='communities'):
-    graphs, features, edge_labels,_,_,_,_ = load_graphs(name)
+def load_tg_dataset(name='communities', num=''):
+    graphs, features, edge_labels,_,_,_,_ = load_graphs(name, num)
     res=nx_to_tg_data(graphs, features, edge_labels)
     # for i, data in enumerate(res):
     #     edges = data.edge_index.T

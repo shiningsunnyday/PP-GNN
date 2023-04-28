@@ -4,7 +4,9 @@ import numpy as np
 import random
 import hashlib
 import json
+import heapq
 from tqdm import tqdm
+from collections import defaultdict
 
 random.seed(123)
 np.random.seed(123)
@@ -211,6 +213,24 @@ def precompute_dist_data(edge_index, num_nodes, approximate=0):
         return dists_array
 
 
+def get_candidates(N,filename):
+    with open(filename,"r") as file:
+        data = file.readlines()
+    n = len(data)
+    res = []
+    for i in range(n-1,-1,-1):
+        line = data[i].split('	')[3]
+        line = line.replace('\'','').replace('u','').replace(',,',',')
+        line = eval(line)
+        for lin in line:
+            res.append(lin[0])
+            res.append(lin[1])
+        res = list(set(res))
+#         print(i,len(res))
+        if len(res)>=N:
+            break
+    return res
+
 
 def get_random_anchorset(n,c=0.5):
     m = int(np.log2(n))
@@ -221,6 +241,57 @@ def get_random_anchorset(n,c=0.5):
         for j in range(copy):
             anchorset_id.append(np.random.choice(n,size=anchor_size,replace=False))
     return anchorset_id
+
+def get_edgeshell_anchors(n, filename="grid", subgraph_id = 0, c=0.5):
+    # file = "/content/P-GNN-Google/P-GNN-master/data/"+filename+"/"+str(subgraph_id)+"_edge_shell.txt"
+    file = f"./datasets/ShellOfEdgesInDatasets/{filename}_edge_shell.txt"
+    m = int(np.log2(n))
+    copy = int(c*m)
+    anchorset_id = []
+    for i in range(m):
+        anchor_size = int(n/np.exp2(i + 1))
+        ''' change '''
+        candidates = get_candidates(anchor_size,file)
+        for j in range(copy):
+            anchorset_id.append(np.random.choice(candidates,size=anchor_size,replace=True))
+            # anchorset_id.append(candidates[0:anchor_size])
+    return anchorset_id
+
+def get_mvc_anchors(data):
+    """
+    GA-MPCA as in https://link.springer.com/chapter/10.1007/978-3-030-38819-5_9    
+    """   
+    N = data.num_nodes
+    adj = np.zeros((N, N))
+    V = set(range(N))
+    A = set()
+    anchors = []
+    degs = defaultdict(int)
+    for j in range(data.edge_index.shape[1]):
+        a = data.edge_index[0,j].item()
+        b = data.edge_index[1,j].item()
+        degs[a] += 1
+        degs[b] += 1
+        adj[a][b] = 1
+        adj[b][a] = 1
+    
+
+    while len(A) != N:
+        max_v = -1
+        max_deg = -1
+        for v in V-A:
+            if degs[v] > max_deg:
+                max_deg = degs[v]
+                max_v = v
+        A.add(max_v)
+        anchors.append([max_v])
+        for j in range(N):
+            if adj[max_v][j]:
+                A.add(j)
+    
+    return anchors
+
+
 
 def get_dist_max(anchorset_id, dist, device):
     dist_max = torch.zeros((dist.shape[0],len(anchorset_id))).to(device)
@@ -234,16 +305,26 @@ def get_dist_max(anchorset_id, dist, device):
     return dist_max, dist_argmax
 
 
-def preselect_anchor(data, layer_num=1, anchor_num=32, anchor_size_num=4, device='cpu'):
+def preselect_anchor(args, data, layer_num=1, anchor_num=32, anchor_size_num=4, device='cpu', dataset='grid'):
 
-    data.anchor_size_num = anchor_size_num
-    data.anchor_set = []
-    anchor_num_per_size = anchor_num//anchor_size_num
-    for i in range(anchor_size_num):
-        anchor_size = 2**(i+1)-1
-        anchors = np.random.choice(data.num_nodes, size=(layer_num,anchor_num_per_size,anchor_size), replace=True)
-        data.anchor_set.append(anchors)
-    data.anchor_set_indicator = np.zeros((layer_num, anchor_num, data.num_nodes), dtype=int)
+    # data.anchor_size_num = anchor_size_num
+    # data.anchor_set = []
+    # anchor_num_per_size = anchor_num//anchor_size_num
+    # for i in range(anchor_size_num):
+    #     anchor_size = 2**(i+1)-1
+    #     anchors = np.random.choice(data.num_nodes, size=(layer_num,anchor_num_per_size,anchor_size), replace=True)
+    #     data.anchor_set.append(anchors)
+    # data.anchor_set_indicator = np.zeros((layer_num, anchor_num, data.num_nodes), dtype=int)
 
-    anchorset_id = get_random_anchorset(data.num_nodes,c=1)
+    if args.anchor_selection in ['p-gnn', 'pp-gnn']:
+        anchorset_id = get_random_anchorset(data.num_nodes,c=1)
+        data.anchorset_id = anchorset_id        
+    elif args.anchor_selection == 'a-gnn':
+        anchorset_id = get_mvc_anchors(data)
+    elif args.anchor_selection == 'as-gnn':
+        subgraph_id = 0        
+        anchorset_id = get_edgeshell_anchors(data.num_nodes, dataset, subgraph_id, c=1)
+        
+    else:
+        raise NotImplementedError
     data.dists_max, data.dists_argmax = get_dist_max(anchorset_id, data.dists, device)

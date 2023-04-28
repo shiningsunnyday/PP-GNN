@@ -31,7 +31,7 @@ class PGNN_layer(nn.Module):
 
     def forward(self, feature, dists_max, dists_argmax):
         if self.dist_trainable:
-            dists_max = self.dist_compute(dists_max.unsqueeze(-1)).squeeze()
+            dists_max = self.dist_compute(dists_max.unsqueeze(-1)).squeeze(-1)
 
         subset_features = feature[dists_argmax.flatten(), :]
         subset_features = subset_features.reshape((dists_argmax.shape[0], dists_argmax.shape[1],

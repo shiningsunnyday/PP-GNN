@@ -50,8 +50,10 @@ def make_args():
 
     parser.add_argument('--lr', dest='lr', default=1e-2, type=float)
     parser.add_argument('--epoch_num', dest='epoch_num', default=2001, type=int)
-    parser.add_argument('--repeat_num', dest='repeat_num', default=2, type=int) # 10
+    parser.add_argument('--repeat_num', dest='repeat_num', default=10, type=int) # 10
     parser.add_argument('--epoch_log', dest='epoch_log', default=10, type=int)
+
+    parser.add_argument('--dataset_num', default="", help=':1 means only graph #1 for args.dataset')
 
     # pretrain
     parser.add_argument('--cut_size', default=-1, type=int) # added for mdp
@@ -64,9 +66,14 @@ def make_args():
     parser.add_argument('--mdp_epochs', default=100, type=int)
     parser.add_argument('--mdp_batch_size', default=1, type=int)
     parser.add_argument('--anchors_only', default=False, type=bool)
+
+    # anchors
+    parser.add_argument('--anchor_selection',default='p-gnn',choices=['p-gnn','a-gnn','as-gnn','pp-gnn'], 
+                        help='defaults to random (p-gnn)')
     
-    parser.set_defaults(gpu=True, task='link', model='GCN', dataset='All',
+    parser.set_defaults(gpu=True, task='link', model='GCN', dataset='All', dataset_num='',
                         cache=False, rm_feature=False,
+                        anchor_selection='p-gnn',
                         permute=True, feature_pre=True, dropout=True,
                         approximate=-1, normalize_adj=False)
     args = parser.parse_args()

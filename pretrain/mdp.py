@@ -3,16 +3,17 @@ from pretrain.GNNMDP.models.gnn import GCN
 from model import PGNN
 import torch.nn.functional as F
 from pretrain.utils import format, join_cuts
+import pretrain.GNNMDP.repair_method as rm
 from utils import hash_tensor
 import torch
 import dgl
 import argparse
 
 class PPGNN(PGNN):
-    def __init__(self, model, mask_weight, *pargs, **kwargs):
+    def __init__(self, model, mask, *pargs, **kwargs):
         super(PPGNN, self).__init__(*pargs, **kwargs)
         self.pretrained_model = model
-        self.mask_ = F.gumbel_softmax(mask_weight,hard=True)[:, 0].T.clone().detach()
+        self.mask_ = mask
         if self.pretrained_model:
             for x, p in self.pretrained_model.named_parameters():
                 p.requires_grad_(False)   
@@ -38,38 +39,50 @@ def pretrain(model, dataset, args, *pargs, **kwargs):
     hash_str = f"{args.approximate}-{args.cut_size}_{tensor_hash}"
     cache_path = path+f"{hash_str}.pkl" if args.cache else ""
     ntables, adjs, cuts = format(args.cut_size, dataset, cache_path) # convert to mdp format
-
     parser = argparse.ArgumentParser()
     mdp_args = parser.parse_args([])
     Gs = []
     models = []
+    
     for ntable, adj in zip(ntables, adjs):
         for k, v in args.__dict__.items():
             if 'mdp_' in k:
                 setattr(mdp_args, k[4:], v)
-        model, G = pretrain_gnn_mdp(mdp_args, 'gcn', adj, ntable)[0] # if not gcn, need to worry about disconnected components
+        (model, G), _, _, _, local_best_ind, _, _, _, _ = pretrain_gnn_mdp(mdp_args, 'gcn', adj, ntable) # if not gcn, need to worry about disconnected components
+        model.local_best_ind = local_best_ind
         models.append(model)
         Gs.append(G)
 
     if args.cut_size == -1:
-        return models[0], Gs[0]
+        ntable = ntables[0]
+        model = models[0]
+        G = Gs[0]
     else:
-        Gs = []
+        ntable = ntables[0]
+        models = join_cuts(models, cuts) # from cuts per dataset to one (model, G) per dataset    
+        model = models[0] # for now assume only one pretraining dataset   
+        _, adjs, _ = format(-1, dataset) # format the original dataset
+        for adj, data in zip(adjs, dataset):
+            edges = data.edge_index
+            edges = torch.cat((edges, torch.flip(edges,dims=(0,))), dim=1)
+            G = dgl.from_scipy(adj)
+            G = dgl.add_self_loop(G)
+            Gs.append(G)
 
-    models = join_cuts(models, cuts) # from cuts per dataset to one (model, G) per dataset    
-    model = models[0] # for now assume only one pretraining dataset   
-    _, adjs, _ = format(-1, dataset) # format the original dataset
-    for adj, data in zip(adjs, dataset):
-        edges = data.edge_index
-        edges = torch.cat((edges, torch.flip(edges,dims=(0,))), dim=1)
-        G = dgl.from_scipy(adj)
-        G = dgl.add_self_loop(G)
-        Gs.append(G)
+        G = Gs[0] # for now assume one pretraining dataset
 
-    G = Gs[0] # for now assume one pretraining dataset
+    
+    mask = torch.zeros(model.mask.weight[:,0].shape)
+    if len(local_best_ind):       
+        r_set, dim = rm.repair_iter(args, local_best_ind, ntable, 100) 
+    else:        
+        r_set, dim = rm.repair_iter(args, set(ntable), ntable, 100)
+    mask[list(r_set)] = 1.
+
+    
     if args.anchors_only:
-        model = PPGNN(None, model.mask.weight, *pargs, **kwargs)
+        model = PPGNN(None, mask, *pargs, **kwargs)
     else:
-        model = PPGNN(model, model.mask.weight, *pargs, **kwargs)
+        model = PPGNN(model, mask, *pargs, **kwargs)
     return model, G
     
